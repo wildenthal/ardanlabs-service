@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: app-system
+spec:
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: app
+          image: app-image
+          imagePullPolicy: Always
+          ports:
+            - name: app
+              containerPort: 3000
+            - name: app-debug
+              containerPort: 3010
+          env:
+          - name: GOMAXPROCS
+            valueFrom:
+              resourceFieldRef:
+                resource: limits.cpu
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-service
+  namespace: app-system
+spec:
+  selector:
+    app: app

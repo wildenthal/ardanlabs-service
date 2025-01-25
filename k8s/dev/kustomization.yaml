@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base/
+patches:
+  - path: ./dev-app-patch-deploy.yaml
+  - path: ./dev-app-patch-service.yaml
+images:
+  - name: app-image
+    newName: localhost:5001/ardanlabs/app
+    newTag: 0.0.1

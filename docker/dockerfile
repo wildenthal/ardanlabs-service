@@ -1,0 +1,19 @@
+FROM golang:1.22 AS builder
+ARG BUILD_REF
+
+COPY . /app
+
+WORKDIR /app
+RUN echo "Building with build ref: ${BUILD_REF}"
+RUN GOOS=linux GOARCH=amd64 go build -ldflags "-X main.build=${BUILD_REF}" -o main
+
+FROM alpine:3.19
+ARG BUILD_DATE
+ARG BUILD_REF
+
+WORKDIR /app
+COPY --from=builder /app/main /app/main
+CMD ["./main"]
+
+LABEL org.opencontainers.image.created=$BUILD_DATE
+LABEL org.opencontainers.image.revision=$BUILD_REF

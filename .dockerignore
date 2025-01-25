@@ -1,0 +1,4 @@
+.dockerignore
+kind-config.yaml
+docker/
+makefile
