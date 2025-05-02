@@ -6,7 +6,7 @@ The course is available at [https://www.ardanlabs.com/](https://www.ardanlabs.co
 ## Description
 
 Currently includes a single service set up to run in a Kubernetes cluster.
-The original code is from the course, with some modifications to remove external dependencies and add support for docker.
+The original code is from the course, with some modifications to remove external dependencies and add support for podman.
 
 ## Getting Started
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"expvar"
 	"fmt"
 	"log/slog"
@@ -52,9 +53,12 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
+	mux := http.NewServeMux()
+	setUpRouter(mux)
+
 	api := http.Server{
 		Addr:         cfg.APIHost,
-		Handler:      nil,
+		Handler:      mux,
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,
 		IdleTimeout:  cfg.IdleTimeout,
@@ -132,4 +136,21 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func statusOKHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := json.Marshal(map[string]string{"Status": "OK"})
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+func setUpRouter(mux *http.ServeMux) {
+	mux.HandleFunc("GET /liveness", statusOKHandler)
+	mux.HandleFunc("GET /readiness", statusOKHandler)
+	return
 }
