@@ -1,6 +1,8 @@
 VERSION = 0.0.1
 IMAGE = ardanlabs/app:$(VERSION)
 DOCKER_IMAGE = localhost/$(IMAGE)
+NAMESPACE = app-system
+APP = app
 
 run:
 	go run cmd/app/main.go | go run pkg/logfmt/main.go
