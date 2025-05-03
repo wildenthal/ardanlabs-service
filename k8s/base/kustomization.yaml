@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - ./base.yaml
   - ./otel-collector.yaml
+  - ./jaeger.yaml
