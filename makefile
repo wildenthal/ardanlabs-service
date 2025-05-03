@@ -3,7 +3,7 @@ IMAGE = ardanlabs/app:$(VERSION)
 DOCKER_IMAGE = localhost/$(IMAGE)
 
 run:
-	go run main.go | go run pkg/logfmt/main.go
+	go run cmd/app/main.go | go run pkg/logfmt/main.go
 
 dev-up:
 	kind create cluster \

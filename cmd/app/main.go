@@ -3,17 +3,20 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"expvar"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/wildenthal/ardanlabs-service/pkg/debug"
+	"github.com/wildenthal/ardanlabs-service/pkg/otel"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var build = "develop"
@@ -50,19 +53,30 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	// Start API service
 	logger.InfoContext(ctx, "Starting API service", "host", cfg.APIHost)
 
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	otelShutdown, err := otel.SetupOTelSDK(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
 
 	mux := http.NewServeMux()
 	setUpRouter(mux)
+	handler := otelhttp.NewHandler(mux, "/")
 
 	api := http.Server{
 		Addr:         cfg.APIHost,
-		Handler:      mux,
+		BaseContext:  func(_ net.Listener) context.Context { return ctx },
+		ErrorLog:     slog.NewLogLogger(slog.NewJSONHandler(os.Stderr, nil), slog.LevelError),
+		Handler:      handler,
+		IdleTimeout:  cfg.IdleTimeout,
 		ReadTimeout:  cfg.ReadTimeout,
 		WriteTimeout: cfg.WriteTimeout,
-		IdleTimeout:  cfg.IdleTimeout,
-		ErrorLog:     slog.NewLogLogger(slog.NewJSONHandler(os.Stderr, nil), slog.LevelError),
 	}
 	serverErrors := make(chan error, 1)
 
@@ -74,8 +88,8 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	select {
 	case err := <-serverErrors:
 		return fmt.Errorf("server error: %w", err)
-	case sig := <-shutdown:
-		logger.InfoContext(ctx, "Received shutdown signal", "signal", sig)
+	case <-ctx.Done():
+		logger.InfoContext(ctx, "Received shutdown signal")
 		defer logger.InfoContext(ctx, "Shutdown complete", "took", time.Since(time.Now()))
 
 		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
@@ -85,6 +99,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 			api.Close()
 			return fmt.Errorf("could not shutdown server: %w", err)
 		}
+		stop()
 	}
 
 	return nil
@@ -150,7 +165,14 @@ func statusOKHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setUpRouter(mux *http.ServeMux) {
-	mux.HandleFunc("GET /liveness", statusOKHandler)
-	mux.HandleFunc("GET /readiness", statusOKHandler)
+	// handleFunc is a replacement for mux.HandleFunc
+	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
+	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+		// Configure the "http.route" for the HTTP instrumentation.
+		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
+		mux.Handle(pattern, handler)
+	}
+	handleFunc("GET /liveness", statusOKHandler)
+	handleFunc("GET /readiness", statusOKHandler)
 	return
 }

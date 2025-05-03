@@ -5,7 +5,7 @@ COPY . /app
 
 WORKDIR /app
 RUN echo "Building with build ref: ${BUILD_REF}"
-RUN GOOS=linux GOARCH=amd64 go build -ldflags "-X main.build=${BUILD_REF}" -o main
+RUN GOOS=linux GOARCH=amd64 go build -ldflags "-X main.build=${BUILD_REF}" -o main ./cmd/app/main.go
 
 FROM alpine:3.19
 ARG BUILD_DATE
