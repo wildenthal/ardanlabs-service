@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"expvar"
 	"fmt"
 	"log/slog"
@@ -15,8 +14,12 @@ import (
 	"time"
 
 	"github.com/wildenthal/ardanlabs-service/pkg/debug"
-	"github.com/wildenthal/ardanlabs-service/pkg/otel"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 )
 
 var build = "develop"
@@ -56,15 +59,30 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	otelShutdown, err := otel.SetupOTelSDK(ctx)
+	exp, err := otlptracegrpc.New(
+		ctx,
+		otlptracegrpc.WithEndpoint("otel-collector:4317"),
+		otlptracegrpc.WithInsecure(),
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create trace exporter: %w", err)
 	}
 
+	tracerProvider := trace.NewTracerProvider(
+		trace.WithBatcher(exp),
+		trace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("app"),
+			semconv.ServiceVersion(build),
+		)),
+	)
 	defer func() {
-		err = errors.Join(err, otelShutdown(context.Background()))
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			logger.ErrorContext(ctx, "failed to shutdown tracer provider", "error", err)
+		}
 	}()
 
+	otel.SetTracerProvider(tracerProvider)
 	mux := http.NewServeMux()
 	setUpRouter(mux)
 	handler := otelhttp.NewHandler(mux, "/")

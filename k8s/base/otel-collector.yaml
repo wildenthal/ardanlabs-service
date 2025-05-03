@@ -8,8 +8,10 @@ data:
     receivers:
       otlp:
         protocols:
-          grpc:  # For OTLP/gRPC (default for many SDKs)
-          http:  # For OTLP/HTTP
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
     processors:
       batch:  # Batch telemetry data before exporting
     exporters:

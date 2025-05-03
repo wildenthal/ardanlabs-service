@@ -47,6 +47,7 @@ dev-apply:
 
 dev-restart:
 	kubectl rollout restart deployment app --namespace=app-system
+	kubectl wait pods --namespace=$(NAMESPACE) --selector app=$(APP) --for=condition=Ready --timeout=120s
 
 dev-update: build dev-load dev-restart
 
