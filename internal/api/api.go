@@ -2,26 +2,21 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
-
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func SetUpRouter(mux *http.ServeMux) {
-	// handleFunc is a replacement for mux.HandleFunc
-	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
-	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
-		// Configure the "http.route" for the HTTP instrumentation.
-		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
-		mux.Handle(pattern, handler)
-	}
-	handleFunc("GET /", StatusOKHandler)
-	handleFunc("GET /liveness", StatusOKHandler)
-	handleFunc("GET /readiness", StatusOKHandler)
-	return
+type httpController struct {
+	logger *slog.Logger
 }
 
-func StatusOKHandler(w http.ResponseWriter, r *http.Request) {
+func NewHTTPController(logger *slog.Logger) *httpController {
+	return &httpController{
+		logger: logger,
+	}
+}
+
+func (c *httpController) StatusOKHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := json.Marshal(map[string]string{"Status": "OK"})
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -30,4 +25,10 @@ func StatusOKHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
+	c.logger.InfoContext(r.Context(), "Looking good", "method", r.Method, "path", r.URL.Path)
+}
+
+// PanicHandler is used to intentionally trigger a panic for testing middleware recovery mechanisms.
+func (c *httpController) PanicHandler(w http.ResponseWriter, r *http.Request) {
+	panic("This is a panic")
 }

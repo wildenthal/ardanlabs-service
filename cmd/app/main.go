@@ -14,7 +14,9 @@ import (
 
 	"github.com/wildenthal/ardanlabs-service/internal/api"
 	"github.com/wildenthal/ardanlabs-service/internal/config"
+	"github.com/wildenthal/ardanlabs-service/internal/middleware"
 	"github.com/wildenthal/ardanlabs-service/pkg/debug"
+	"github.com/wildenthal/ardanlabs-service/pkg/logging"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -26,7 +28,7 @@ import (
 var build = "develop"
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(logging.NewTraceHandler(slog.NewJSONHandler(os.Stdout, nil)))
 	ctx := context.Background()
 
 	if err := run(ctx, logger); err != nil {
@@ -60,6 +62,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
 	defer stop()
 
+	// Initialize OpenTelemetry
 	exp, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create trace exporter: %w", err)
@@ -78,11 +81,28 @@ func run(ctx context.Context, logger *slog.Logger) error {
 			logger.ErrorContext(ctx, "failed to shutdown tracer provider", "error", err)
 		}
 	}()
-
 	otel.SetTracerProvider(tracerProvider)
+
+	// Initialize middleware and set up the HTTP request multiplexer
+	m := middleware.New(logger)
 	mux := http.NewServeMux()
-	api.SetUpRouter(mux)
-	handler := otelhttp.NewHandler(mux, "/")
+	c := api.NewHTTPController(logger)
+
+	// Helper to tag routes with OTEL spans
+	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
+		mux.Handle(pattern, handler)
+	}
+
+	// Register routes
+	handleFunc("GET /", c.StatusOKHandler)
+	handleFunc("GET /liveness", c.StatusOKHandler)
+	handleFunc("GET /readiness", c.StatusOKHandler)
+	handleFunc("GET /panic", c.PanicHandler)
+
+	// Apply middleware and OTEL tracing
+	handler := m.HTTPMiddleware(mux)
+	handler = otelhttp.NewHandler(handler, "/")
 
 	server := http.Server{
 		Addr:         cfg.APIHost,
@@ -105,7 +125,8 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		return fmt.Errorf("server error: %w", err)
 	case <-ctx.Done():
 		logger.InfoContext(ctx, "Received shutdown signal")
-		defer logger.InfoContext(ctx, "Shutdown complete", "took", time.Since(time.Now()))
+		shutdownStart := time.Now()
+		defer logger.InfoContext(ctx, "Shutdown complete", "took", time.Since(shutdownStart))
 
 		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
 		defer cancel()
