@@ -3,9 +3,9 @@ kind: Kustomization
 resources:
   - ../base/
 patches:
-  - path: ./dev-app-patch-deploy.yaml
-  - path: ./dev-app-patch-service.yaml
-  - path: ./dev-app-patch-config.yaml
+  - path: ./patch-app-deploy.yaml
+  - path: ./patch-app-service.yaml
+  - path: ./patch-app-config.yaml
 images:
   - name: app-image
     newName: localhost:5001/ardanlabs/app
