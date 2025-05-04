@@ -30,7 +30,6 @@ dev-status:
 
 build:
 	podman build \
-		--no-cache \
 		-f docker/dockerfile \
 		-t $(DOCKER_IMAGE) \
 		--build-arg BUILD_REF=$(VERSION) \

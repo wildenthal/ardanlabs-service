@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"expvar"
 	"fmt"
 	"log/slog"
@@ -13,6 +12,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/wildenthal/ardanlabs-service/internal/api"
+	"github.com/wildenthal/ardanlabs-service/internal/config"
 	"github.com/wildenthal/ardanlabs-service/pkg/debug"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -38,7 +39,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	logger.InfoContext(ctx, "Starting up", "GOMAXPROCS", runtime.GOMAXPROCS(0), "build", build)
 
 	// Load configuration
-	cfg, err := loadConfig()
+	cfg, err := config.LoadConfig(build)
 	if err != nil {
 		return fmt.Errorf("could not load configuration: %w", err)
 	}
@@ -84,10 +85,10 @@ func run(ctx context.Context, logger *slog.Logger) error {
 
 	otel.SetTracerProvider(tracerProvider)
 	mux := http.NewServeMux()
-	setUpRouter(mux)
+	api.SetUpRouter(mux)
 	handler := otelhttp.NewHandler(mux, "/")
 
-	api := http.Server{
+	server := http.Server{
 		Addr:         cfg.APIHost,
 		BaseContext:  func(_ net.Listener) context.Context { return ctx },
 		ErrorLog:     slog.NewLogLogger(slog.NewJSONHandler(os.Stderr, nil), slog.LevelError),
@@ -99,7 +100,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		serverErrors <- api.ListenAndServe()
+		serverErrors <- server.ListenAndServe()
 	}()
 
 	// Shutdown
@@ -113,84 +114,12 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
 		defer cancel()
 
-		if err := api.Shutdown(ctx); err != nil {
-			api.Close()
+		if err := server.Shutdown(ctx); err != nil {
+			server.Close()
 			return fmt.Errorf("could not shutdown server: %w", err)
 		}
 		stop()
 	}
 
 	return nil
-}
-
-type config struct {
-	Build           string
-	Desc            string
-	APIHost         string
-	DebugHost       string
-	ReadTimeout     time.Duration
-	WriteTimeout    time.Duration
-	IdleTimeout     time.Duration
-	ShutdownTimeout time.Duration
-}
-
-func loadConfig() (*config, error) {
-	readTimeout, err := time.ParseDuration(getEnv("READ_TIMEOUT", "5s"))
-	if err != nil {
-		return nil, err
-	}
-	writeTimeout, err := time.ParseDuration(getEnv("WRITE_TIMEOUT", "10s"))
-	if err != nil {
-		return nil, err
-	}
-	idleTimeout, err := time.ParseDuration(getEnv("IDLE_TIMEOUT", "120s"))
-	if err != nil {
-		return nil, err
-	}
-	shutdownTimeout, err := time.ParseDuration(getEnv("SHUTDOWN_TIMEOUT", "5s"))
-	if err != nil {
-		return nil, err
-	}
-
-	return &config{
-		Build:           build,
-		Desc:            "Example service",
-		APIHost:         getEnv("API_HOST", "0.0.0.0:3000"),
-		DebugHost:       getEnv("DEBUG_HOST", "0.0.0.0:3010"),
-		ReadTimeout:     readTimeout,
-		WriteTimeout:    writeTimeout,
-		IdleTimeout:     idleTimeout,
-		ShutdownTimeout: shutdownTimeout,
-	}, nil
-}
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
-
-func statusOKHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := json.Marshal(map[string]string{"Status": "OK"})
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
-}
-
-func setUpRouter(mux *http.ServeMux) {
-	// handleFunc is a replacement for mux.HandleFunc
-	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
-	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
-		// Configure the "http.route" for the HTTP instrumentation.
-		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
-		mux.Handle(pattern, handler)
-	}
-	handleFunc("GET /liveness", statusOKHandler)
-	handleFunc("GET /readiness", statusOKHandler)
-	return
 }

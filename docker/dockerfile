@@ -1,18 +1,29 @@
-FROM golang:1.24 AS builder
+FROM golang:1.24 AS dependencies
+WORKDIR /src
+
+COPY go.mod .
+ENV GOOS=linux
+ENV GOARCH=amd64
+
+RUN apt-get update && apt-get install -y --no-install-recommends
+RUN go mod download
+
+FROM dependencies AS builder
 ARG BUILD_REF
 
-COPY . /app
+WORKDIR /build
+COPY . .
 
-WORKDIR /app
 RUN echo "Building with build ref: ${BUILD_REF}"
 RUN GOOS=linux GOARCH=amd64 go build -ldflags "-X main.build=${BUILD_REF}" -o main ./cmd/app/main.go
 
-FROM alpine:3.19
+FROM alpine:3.19 AS runner
+
 ARG BUILD_DATE
 ARG BUILD_REF
 
 WORKDIR /app
-COPY --from=builder /app/main /app/main
+COPY --from=builder /build/main /app/main
 CMD ["./main"]
 
 LABEL org.opencontainers.image.created=$BUILD_DATE
