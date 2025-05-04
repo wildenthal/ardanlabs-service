@@ -23,8 +23,8 @@ const (
 	defaultIdleTimeout     = 120 * time.Second
 	defaultShutdownTimeout = 5 * time.Second
 	defaultOTLPHost        = ""
-	defaultApiHost         = "0.0.0.0:3000"
-	defaultDebugHost       = "0.0.0.0:3010"
+	defaultApiHost         = "0.0.0.0:8080"
+	defaultDebugHost       = "0.0.0.0:6060"
 )
 
 // error messages

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: jaeger
-  namespace: app-system
+  namespace: observability
 spec:
   replicas: 1
   selector:
@@ -13,8 +13,6 @@ spec:
       labels:
         app: jaeger
     spec:
-      dnsPolicy: ClusterFirstWithHostNet
-      hostNetwork: true
       containers:
       - name: jaeger
         image: jaegertracing/opentelemetry-all-in-one:latest
@@ -33,7 +31,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: jaeger
-  namespace: app-system
+  namespace: observability
 spec:
   type: ClusterIP
   selector:

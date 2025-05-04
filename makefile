@@ -34,6 +34,10 @@ build:
 load:
 	podman image push $(DOCKER_IMAGE) localhost:5001/$(IMAGE)
 
+instrumentation:
+	kustomize build k8s/instrumentation | kubectl apply -f -
+	kubectl wait --for=condition=Ready pods --all -n observability --timeout=120s
+
 apply:
 	kustomize build k8s/dev | kubectl apply -f -
 
