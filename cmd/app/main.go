@@ -30,7 +30,7 @@ func main() {
 	ctx := context.Background()
 
 	if err := run(ctx, logger); err != nil {
-		logger.Error("Startup failed", "error", err)
+		logger.ErrorContext(ctx, "Startup failed", "error", err)
 		os.Exit(1)
 	}
 }
@@ -57,7 +57,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	// Start API service
 	logger.InfoContext(ctx, "Starting API service", "host", cfg.APIHost)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
 	defer stop()
 
 	exp, err := otlptracegrpc.New(
