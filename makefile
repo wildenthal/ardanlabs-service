@@ -18,6 +18,10 @@ up:
 down:
 	kind delete cluster --name ardan-starter-cluster
 
+test:
+	go clean -testcache
+	go test -v -cover -coverprofile=./cover.out -race ./...
+
 build:
 	podman build \
 		-f docker/dockerfile \

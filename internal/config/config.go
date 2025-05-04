@@ -6,11 +6,6 @@ import (
 	"time"
 )
 
-const (
-	missing   = "environment variable %s is required"
-	loadError = "failed to load environment variable %s: %w"
-)
-
 type Config struct {
 	Build           string
 	Desc            string
@@ -24,32 +19,32 @@ type Config struct {
 }
 
 func LoadConfig(build string) (*Config, error) {
-	readTimeout, err := loadDuration("READ_TIMEOUT", 5*time.Second)
+	readTimeout, err := loadDuration(readTimeoutKey, defaultReadTimeout)
 	if err != nil {
 		return nil, err
 	}
-	writeTimeout, err := loadDuration("WRITE_TIMEOUT", 10*time.Second)
+	writeTimeout, err := loadDuration(writeTimeoutKey, defaultWriteTimeout)
 	if err != nil {
 		return nil, err
 	}
-	idleTimeout, err := loadDuration("IDLE_TIMEOUT", 120*time.Second)
+	idleTimeout, err := loadDuration(idleTimeoutKey, defaultIdleTimeout)
 	if err != nil {
 		return nil, err
 	}
-	shutdownTimeout, err := loadDuration("SHUTDOWN_TIMEOUT", 5*time.Second)
+	shutdownTimeout, err := loadDuration(shutdownTimeoutKey, defaultShutdownTimeout)
 	if err != nil {
 		return nil, err
 	}
-	otlpHost := getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-	if otlpHost == "" {
-		return nil, fmt.Errorf(missing, "OTLP_HOST")
+	otlpHost, ok := os.LookupEnv(otlpHostKey)
+	if !ok {
+		return nil, fmt.Errorf(missingEnvVarError, otlpHostKey)
 	}
 
 	return &Config{
 		Build:           build,
 		Desc:            "",
-		APIHost:         getEnv("API_HOST", "0.0.0.0:3000"),
-		DebugHost:       getEnv("DEBUG_HOST", "0.0.0.0:3010"),
+		APIHost:         getEnv(apiHostKey, defaultApiHost),
+		DebugHost:       getEnv(debugHostKey, defaultDebugHost),
 		OTLPHost:        otlpHost,
 		ReadTimeout:     readTimeout,
 		WriteTimeout:    writeTimeout,
@@ -66,10 +61,13 @@ func getEnv(key, fallback string) string {
 }
 
 func loadDuration(key string, defaultValue time.Duration) (time.Duration, error) {
-	value := getEnv(key, defaultValue.String())
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return defaultValue, nil
+	}
 	duration, err := time.ParseDuration(value)
 	if err != nil {
-		return 0, fmt.Errorf(loadError, key, err)
+		return 0, fmt.Errorf(loadEnvVarError, key, err)
 	}
 	return duration, nil
 }
