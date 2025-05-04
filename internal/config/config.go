@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	missing = "environment variable %s is required"
+	missing   = "environment variable %s is required"
+	loadError = "failed to load environment variable %s: %w"
 )
 
 type Config struct {
@@ -23,19 +24,19 @@ type Config struct {
 }
 
 func LoadConfig(build string) (*Config, error) {
-	readTimeout, err := time.ParseDuration(getEnv("READ_TIMEOUT", "5s"))
+	readTimeout, err := loadDuration("READ_TIMEOUT", 5*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	writeTimeout, err := time.ParseDuration(getEnv("WRITE_TIMEOUT", "10s"))
+	writeTimeout, err := loadDuration("WRITE_TIMEOUT", 10*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	idleTimeout, err := time.ParseDuration(getEnv("IDLE_TIMEOUT", "120s"))
+	idleTimeout, err := loadDuration("IDLE_TIMEOUT", 120*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	shutdownTimeout, err := time.ParseDuration(getEnv("SHUTDOWN_TIMEOUT", "5s"))
+	shutdownTimeout, err := loadDuration("SHUTDOWN_TIMEOUT", 5*time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -62,4 +63,13 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func loadDuration(key string, defaultValue time.Duration) (time.Duration, error) {
+	value := getEnv(key, defaultValue.String())
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf(loadError, key, err)
+	}
+	return duration, nil
 }
