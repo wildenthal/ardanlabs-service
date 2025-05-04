@@ -8,7 +8,7 @@ The course is available at [https://www.ardanlabs.com/](https://www.ardanlabs.co
 Currently includes a single service set up to run in a Kubernetes cluster using Kind.
 The original code is from the course, with some modifications: 
  - Podman is used instead of Docker
- - OTEL is used for tracing with Jaeger
+ - OTEL is used for tracing and metrics with Jaeger and Prometheus
  - Simplified abstractions where direct approaches felt more appropriate
 
 ## Getting Started
