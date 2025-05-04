@@ -9,7 +9,7 @@ nodes:
   extraPortMappings:
   - containerPort: 3000
     hostPort: 3000
-  - containerPort: 3010
-    hostPort: 3010
-  - containerPort: 16686
-    hostPort: 16686
+  - containerPort: 6060
+    hostPort: 6060
+  - containerPort: 8080
+    hostPort: 8080

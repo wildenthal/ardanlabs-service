@@ -24,9 +24,9 @@ spec:
           imagePullPolicy: Always
           ports:
             - name: app
-              containerPort: 3000
+              containerPort: 8080
             - name: app-debug
-              containerPort: 3010
+              containerPort: 6060
           env:
           - name: GOMAXPROCS
             valueFrom:
