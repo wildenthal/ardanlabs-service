@@ -83,7 +83,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	}()
 	otel.SetTracerProvider(tracerProvider)
 
-	// Initialize middleware and
+	// Initialize middleware and set up the HTTP request multiplexer
 	m := middleware.New(logger)
 	mux := http.NewServeMux()
 	c := api.NewHTTPController(logger)
