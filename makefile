@@ -14,6 +14,7 @@ up:
 		--config k8s/kind-config.yaml
 	kubectl wait --timeout=120s --namespace=local-path-storage --for=condition=Available deployment/local-path-provisioner
 	./k8s/kind-with-registry.sh
+	kubectl config set-context --current --namespace=$(NAMESPACE)
 
 down:
 	kind delete cluster --name ardan-starter-cluster
@@ -33,11 +34,11 @@ build:
 load:
 	podman image push $(DOCKER_IMAGE) localhost:5001/$(IMAGE)
 
-apply-dev:
+apply:
 	kustomize build k8s/dev | kubectl apply -f -
 
 restart:
-	kubectl rollout restart deployment app --namespace=app-system
+	kubectl rollout restart deployment app
 
 update: build load restart
 
