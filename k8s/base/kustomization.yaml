@@ -4,3 +4,4 @@ resources:
   - ./base.yaml
   - ./otel-collector.yaml
   - ./jaeger.yaml
+  - ./prometheus.yaml
