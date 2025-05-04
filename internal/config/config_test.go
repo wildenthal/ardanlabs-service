@@ -1,8 +1,9 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -61,32 +62,32 @@ func Test_LoadConfig(t *testing.T) {
 			env: map[string]string{
 				readTimeoutKey: "invalid",
 			},
-			wantErr: fmt.Errorf(loadEnvVarError, readTimeoutKey, fmt.Errorf(`time: invalid duration "invalid"`)),
+			wantErr: errInvalidDuration,
 		},
 		{
 			name: "Invalid write timeout",
 			env: map[string]string{
 				writeTimeoutKey: "invalid",
 			},
-			wantErr: fmt.Errorf(loadEnvVarError, writeTimeoutKey, fmt.Errorf(`time: invalid duration "invalid"`)),
+			wantErr: errInvalidDuration,
 		},
 		{
 			name: "Invalid idle timeout",
 			env: map[string]string{
 				idleTimeoutKey: "invalid",
 			},
-			wantErr: fmt.Errorf(loadEnvVarError, idleTimeoutKey, fmt.Errorf(`time: invalid duration "invalid"`)),
+			wantErr: errInvalidDuration,
 		},
 		{
 			name: "Invalid shutdown timeout",
 			env: map[string]string{
 				shutdownTimeoutKey: "invalid",
 			},
-			wantErr: fmt.Errorf(loadEnvVarError, shutdownTimeoutKey, fmt.Errorf(`time: invalid duration "invalid"`)),
+			wantErr: errInvalidDuration,
 		},
 		{
 			name:    "Missing OTLP host",
-			wantErr: fmt.Errorf(missingEnvVarError, otlpHostKey),
+			wantErr: errMissingEnvVar,
 		},
 	} {
 		t.Run(tcase.name, func(t *testing.T) {
@@ -102,20 +103,12 @@ func Test_LoadConfig(t *testing.T) {
 			}
 			got, err := LoadConfig(tcase.build)
 
-			if (tcase.wantErr == nil) != (err == nil) {
-				t.Errorf("want error: %v, got: %v", tcase.wantErr, err)
-			} else if tcase.wantErr != nil && err != nil {
-				if tcase.wantErr.Error() != err.Error() {
-					t.Errorf("want error message: %v, got: %v", tcase.wantErr, err)
-				}
+			if !errors.Is(err, tcase.wantErr) {
+				t.Errorf("unexpected error: want=%v, got=%v", tcase.wantErr, err)
 			}
 
-			if (tcase.want == nil) != (got == nil) {
-				t.Errorf("want: %v, got: %v", tcase.want, got)
-			} else if tcase.want != nil && got != nil {
-				if *tcase.want != *got {
-					t.Errorf("want build: %v, got: %v", tcase.want.Build, got.Build)
-				}
+			if tcase.want != nil && !reflect.DeepEqual(tcase.want, got) {
+				t.Errorf("unexpected config: want=%+v, got=%+v", tcase.want, got)
 			}
 		})
 	}

@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 // key names for environment variables
 const (
@@ -25,7 +28,7 @@ const (
 )
 
 // error messages
-const (
-	missingEnvVarError = "environment variable %s is required"
-	loadEnvVarError    = "failed to load environment variable %s: %w"
+var (
+	errInvalidDuration = errors.New("invalid duration")
+	errMissingEnvVar   = errors.New("missing environment variable")
 )

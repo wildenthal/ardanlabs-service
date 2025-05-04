@@ -37,7 +37,7 @@ func LoadConfig(build string) (*Config, error) {
 	}
 	otlpHost, ok := os.LookupEnv(otlpHostKey)
 	if !ok {
-		return nil, fmt.Errorf(missingEnvVarError, otlpHostKey)
+		return nil, fmt.Errorf("environment variable %s is required: %w", otlpHostKey, errMissingEnvVar)
 	}
 
 	return &Config{
@@ -67,7 +67,7 @@ func loadDuration(key string, defaultValue time.Duration) (time.Duration, error)
 	}
 	duration, err := time.ParseDuration(value)
 	if err != nil {
-		return 0, fmt.Errorf(loadEnvVarError, key, err)
+		return 0, fmt.Errorf("invalid duration for %s: %w", key, errInvalidDuration)
 	}
 	return duration, nil
 }
