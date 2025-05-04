@@ -8,8 +8,8 @@ The course is available at [https://www.ardanlabs.com/](https://www.ardanlabs.co
 Currently includes a single service set up to run in a Kubernetes cluster using Kind.
 The original code is from the course, with some modifications: 
  - Podman is used instead of Docker
- - OTEL is used for tracing
- - Dependencies are simplified in favor of the standard library
+ - OTEL is used for tracing and visualized with Jaeger
+ - Simplified abstractions where direct approaches felt more appropriate
 
 ## Getting Started
 
@@ -26,7 +26,7 @@ See the makefile for the available commands.
 
 ## Environment Variables
 
-The following environment variables are used in the Dockerfile to configure the application:
+The following environment variables are used to configure the application:
 
 - `READ_TIMEOUT`: The maximum duration for reading the entire request, including the body. Default is `5s`.
 - `WRITE_TIMEOUT`: The maximum duration before timing out writes of the response. Default is `10s`.
