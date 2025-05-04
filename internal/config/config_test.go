@@ -24,7 +24,6 @@ func Test_LoadConfig(t *testing.T) {
 				writeTimeoutKey:    "137s",
 				idleTimeoutKey:     "137s",
 				shutdownTimeoutKey: "137s",
-				otlpHostKey:        "OTEL_EXPORTER_OTLP_ENDPOINT",
 				apiHostKey:         "API_HOST",
 				debugHostKey:       "DEBUG_HOST",
 			},
@@ -33,7 +32,6 @@ func Test_LoadConfig(t *testing.T) {
 				Desc:            "",
 				APIHost:         "API_HOST",
 				DebugHost:       "DEBUG_HOST",
-				OTLPHost:        "OTEL_EXPORTER_OTLP_ENDPOINT",
 				ReadTimeout:     137 * time.Second,
 				WriteTimeout:    137 * time.Second,
 				IdleTimeout:     137 * time.Second,
@@ -42,15 +40,11 @@ func Test_LoadConfig(t *testing.T) {
 		},
 		{
 			name: "OK with default values",
-			env: map[string]string{
-				otlpHostKey: "OTEL_EXPORTER_OTLP_ENDPOINT",
-			},
 			want: &Config{
 				Build:           "",
 				Desc:            "",
 				APIHost:         defaultApiHost,
 				DebugHost:       defaultDebugHost,
-				OTLPHost:        "OTEL_EXPORTER_OTLP_ENDPOINT",
 				ReadTimeout:     defaultReadTimeout,
 				WriteTimeout:    defaultWriteTimeout,
 				IdleTimeout:     defaultIdleTimeout,
@@ -84,10 +78,6 @@ func Test_LoadConfig(t *testing.T) {
 				shutdownTimeoutKey: "invalid",
 			},
 			wantErr: errInvalidDuration,
-		},
-		{
-			name:    "Missing OTLP host",
-			wantErr: errMissingEnvVar,
 		},
 	} {
 		t.Run(tcase.name, func(t *testing.T) {

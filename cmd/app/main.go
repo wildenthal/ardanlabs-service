@@ -60,11 +60,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
 	defer stop()
 
-	exp, err := otlptracegrpc.New(
-		ctx,
-		otlptracegrpc.WithEndpoint(cfg.OTLPHost),
-		otlptracegrpc.WithInsecure(),
-	)
+	exp, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create trace exporter: %w", err)
 	}

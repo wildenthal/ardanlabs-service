@@ -11,7 +11,6 @@ type Config struct {
 	Desc            string
 	APIHost         string
 	DebugHost       string
-	OTLPHost        string
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
 	IdleTimeout     time.Duration
@@ -35,17 +34,12 @@ func LoadConfig(build string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	otlpHost, ok := os.LookupEnv(otlpHostKey)
-	if !ok {
-		return nil, fmt.Errorf("environment variable %s is required: %w", otlpHostKey, errMissingEnvVar)
-	}
 
 	return &Config{
 		Build:           build,
 		Desc:            "",
 		APIHost:         getEnv(apiHostKey, defaultApiHost),
 		DebugHost:       getEnv(debugHostKey, defaultDebugHost),
-		OTLPHost:        otlpHost,
 		ReadTimeout:     readTimeout,
 		WriteTimeout:    writeTimeout,
 		IdleTimeout:     idleTimeout,
