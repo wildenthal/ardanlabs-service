@@ -2,11 +2,12 @@ FROM golang:1.24 AS dependencies
 WORKDIR /src
 
 COPY go.mod .
+COPY go.sum .
 ENV GOOS=linux
 ENV GOARCH=amd64
 
-RUN apt-get update && apt-get install -y --no-install-recommends
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
 FROM dependencies AS builder
 ARG BUILD_REF
