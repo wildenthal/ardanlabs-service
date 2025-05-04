@@ -5,6 +5,7 @@ resources:
 patches:
   - path: ./dev-app-patch-deploy.yaml
   - path: ./dev-app-patch-service.yaml
+  - path: ./dev-app-patch-config.yaml
 images:
   - name: app-image
     newName: localhost:5001/ardanlabs/app

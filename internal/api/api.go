@@ -15,6 +15,7 @@ func SetUpRouter(mux *http.ServeMux) {
 		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
 		mux.Handle(pattern, handler)
 	}
+	handleFunc("GET /", StatusOKHandler)
 	handleFunc("GET /liveness", StatusOKHandler)
 	handleFunc("GET /readiness", StatusOKHandler)
 	return

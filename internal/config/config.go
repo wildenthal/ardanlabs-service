@@ -1,8 +1,13 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"time"
+)
+
+const (
+	missing = "environment variable %s is required"
 )
 
 type Config struct {
@@ -10,6 +15,7 @@ type Config struct {
 	Desc            string
 	APIHost         string
 	DebugHost       string
+	OTLPHost        string
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
 	IdleTimeout     time.Duration
@@ -33,12 +39,17 @@ func LoadConfig(build string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	otlpHost := getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+	if otlpHost == "" {
+		return nil, fmt.Errorf(missing, "OTLP_HOST")
+	}
 
 	return &Config{
 		Build:           build,
-		Desc:            "Example service",
+		Desc:            "",
 		APIHost:         getEnv("API_HOST", "0.0.0.0:3000"),
 		DebugHost:       getEnv("DEBUG_HOST", "0.0.0.0:3010"),
+		OTLPHost:        otlpHost,
 		ReadTimeout:     readTimeout,
 		WriteTimeout:    writeTimeout,
 		IdleTimeout:     idleTimeout,

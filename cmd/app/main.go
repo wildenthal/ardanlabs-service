@@ -62,7 +62,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 
 	exp, err := otlptracegrpc.New(
 		ctx,
-		otlptracegrpc.WithEndpoint("otel-collector:4317"),
+		otlptracegrpc.WithEndpoint(cfg.OTLPHost),
 		otlptracegrpc.WithInsecure(),
 	)
 	if err != nil {

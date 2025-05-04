@@ -32,6 +32,9 @@ spec:
             valueFrom:
               resourceFieldRef:
                 resource: limits.cpu
+          envFrom:
+            - configMapRef:
+                name: app-config
 ---
 apiVersion: v1
 kind: Service
@@ -41,3 +44,9 @@ metadata:
 spec:
   selector:
     app: app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: app-system

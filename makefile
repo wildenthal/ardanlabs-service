@@ -25,18 +25,15 @@ build:
 		--build-arg BUILD_REF=$(VERSION) \
 		--build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
 		.
-	podman image prune -f
 
 load:
 	podman image push $(DOCKER_IMAGE) localhost:5001/$(IMAGE)
 
 apply-dev:
 	kustomize build k8s/dev | kubectl apply -f -
-	kubectl wait pods --namespace=$(NAMESPACE) --selector app=$(APP) --for=condition=Ready --timeout=120s
 
 restart:
 	kubectl rollout restart deployment app --namespace=app-system
-	kubectl wait pods --namespace=$(NAMESPACE) --selector app=$(APP) --for=condition=Ready --timeout=120s
 
 update: build load restart
 
