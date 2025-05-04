@@ -19,13 +19,18 @@ import (
 	"github.com/wildenthal/ardanlabs-service/pkg/logging"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 )
 
-var build = "develop"
+var (
+	serviceName = "app"
+	build       = "develop"
+)
 
 func main() {
 	logger := slog.New(logging.NewTraceHandler(slog.NewJSONHandler(os.Stdout, nil)))
@@ -63,30 +68,62 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	defer stop()
 
 	// Initialize OpenTelemetry
-	exp, err := otlptracegrpc.New(ctx)
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceName(serviceName),
+			semconv.ServiceVersion(build),
+		),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create opentelemetry resource: %w", err)
+	}
+	traceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create trace exporter: %w", err)
 	}
 
 	tracerProvider := trace.NewTracerProvider(
-		trace.WithBatcher(exp),
-		trace.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName("app"),
-			semconv.ServiceVersion(build),
-		)),
+		trace.WithBatcher(traceExporter),
+		trace.WithResource(res),
 	)
 	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
+		defer cancel()
 		if err := tracerProvider.Shutdown(ctx); err != nil {
 			logger.ErrorContext(ctx, "failed to shutdown tracer provider", "error", err)
 		}
 	}()
 	otel.SetTracerProvider(tracerProvider)
 
+	meterExporter, err := otlpmetricgrpc.New(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create meter exporter: %w", err)
+	}
+
+	meterProvider := metric.NewMeterProvider(
+		metric.WithReader(metric.NewPeriodicReader(meterExporter)),
+		metric.WithResource(res),
+	)
+	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
+		defer cancel()
+		if err := meterProvider.Shutdown(ctx); err != nil {
+			logger.ErrorContext(ctx, "failed to shutdown meter provider", "error", err)
+		}
+	}()
+	otel.SetMeterProvider(meterProvider)
+	meter := meterProvider.Meter(serviceName)
+
 	// Initialize middleware and set up the HTTP request multiplexer
-	m := middleware.New(logger)
 	mux := http.NewServeMux()
-	c := api.NewHTTPController(logger)
+	m, err := middleware.New(logger, meter)
+	if err != nil {
+		return fmt.Errorf("could not create middleware: %w", err)
+	}
+	c, err := api.NewHTTPController(logger, meter)
+	if err != nil {
+		return fmt.Errorf("could not create HTTP controller: %w", err)
+	}
 
 	// Helper to tag routes with OTEL spans
 	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {

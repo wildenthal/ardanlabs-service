@@ -4,16 +4,31 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type httpController struct {
-	logger *slog.Logger
+	logger    *slog.Logger
+	meter     metric.Meter
+	okCounter metric.Int64Counter
 }
 
-func NewHTTPController(logger *slog.Logger) *httpController {
-	return &httpController{
-		logger: logger,
+func NewHTTPController(
+	logger *slog.Logger,
+	meter metric.Meter,
+) (*httpController, error) {
+	// Create a counter for the number of OK responses
+	okCounter, err := meter.Int64Counter("http.ok.responses", metric.WithDescription("Counts the number of OK responses"))
+	if err != nil {
+		return nil, err
 	}
+	return &httpController{
+		logger:    logger,
+		meter:     meter,
+		okCounter: okCounter,
+	}, nil
 }
 
 func (c *httpController) StatusOKHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +40,14 @@ func (c *httpController) StatusOKHandler(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
-	c.logger.InfoContext(r.Context(), "Looking good", "method", r.Method, "path", r.URL.Path)
+
+	// Increment the OK response counter
+	ctx := r.Context()
+	attrs := []attribute.KeyValue{
+		attribute.String("method", r.Method),
+		attribute.String("path", r.URL.Path),
+	}
+	c.okCounter.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
 // PanicHandler is used to intentionally trigger a panic for testing middleware recovery mechanisms.
