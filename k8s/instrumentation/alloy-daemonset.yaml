@@ -44,7 +44,7 @@ spec:
       serviceAccountName: alloy
       containers:
       - name: alloy
-        image: grafana/alloy:latest
+        image: grafana/alloy:v1.8.2
         ports:
         - containerPort: 9080
           name: http-metrics
