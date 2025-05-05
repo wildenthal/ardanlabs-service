@@ -6,3 +6,5 @@ resources:
   - ./jaeger.yaml
   - ./prometheus.yaml
   - ./grafana.yaml
+  - ./loki.yaml
+  - ./promtail-daemonset.yaml

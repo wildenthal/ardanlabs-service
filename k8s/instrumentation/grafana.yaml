@@ -60,3 +60,7 @@ data:
       type: jaeger
       access: proxy
       url: http://jaeger:16686
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki:3100  # Points to your Loki service
