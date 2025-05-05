@@ -63,4 +63,4 @@ data:
     - name: Loki
       type: loki
       access: proxy
-      url: http://loki:3100  # Points to your Loki service
+      url: http://loki:3100
