@@ -46,14 +46,9 @@ spec:
         image: grafana/promtail:latest
         args:
           - "-config.file=/etc/promtail/promtail.yaml"
-        securityContext:
-          runAsUser: 0  # Required to read all log files
         volumeMounts:
         - name: pod-logs
           mountPath: /var/log/pods
-          readOnly: true
-        - name: container-logs
-          mountPath: /var/log/containers  # Changed path for containerd
           readOnly: true
         - name: promtail-config
           mountPath: /etc/promtail
@@ -61,9 +56,6 @@ spec:
       - name: pod-logs
         hostPath:
           path: /var/log/pods
-      - name: container-logs
-        hostPath:
-          path: /var/log/containers  # Standard containerd path
       - name: promtail-config
         configMap:
           name: promtail-config
@@ -91,8 +83,8 @@ data:
         - targets:
             - localhost
           labels:
-            job: pod-logs
-            __path__: /var/log/pods/app-system_app-*/*/*.log  # Target your app logs specifically
+            job: app-logs
+            __path__: /var/log/pods/app-system_app-*/*/*.log
         pipeline_stages:
           - cri: {}
 
