@@ -6,7 +6,7 @@ reg_name='kind-registry'
 reg_port='5001'
 if [ "$(podman inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)" != 'true' ]; then
   podman run \
-    -d --restart=always -p "127.0.0.1:${reg_port}:5000" --network bridge --name "${reg_name}" \
+    -d --restart=always -p "127.0.0.1:${reg_port}:5000" --network bridge --name "${reg_name}" -v kind_registry:/var/lib/registry \
     registry:2
 fi
 

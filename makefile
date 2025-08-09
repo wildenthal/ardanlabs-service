@@ -43,6 +43,8 @@ apply:
 
 restart:
 	kubectl rollout restart deployment app
+	kubectl rollout restart deployment loki -n observability
+	kubectl rollout restart daemonset alloy -n observability
 
 update: build load restart
 
