@@ -39,7 +39,10 @@ func (c *httpController) StatusOKHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		c.logger.ErrorContext(r.Context(), "failed to write response", "error", err)
+	}
 
 	// Increment the OK response counter
 	ctx := r.Context()

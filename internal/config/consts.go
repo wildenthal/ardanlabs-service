@@ -30,5 +30,4 @@ const (
 // error messages
 var (
 	errInvalidDuration = errors.New("invalid duration")
-	errMissingEnvVar   = errors.New("missing environment variable")
 )

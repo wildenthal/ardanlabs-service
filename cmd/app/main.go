@@ -87,9 +87,9 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		trace.WithResource(res),
 	)
 	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
 		defer cancel()
-		if err := tracerProvider.Shutdown(ctx); err != nil {
+		if err := tracerProvider.Shutdown(shutdownCtx); err != nil {
 			logger.ErrorContext(ctx, "failed to shutdown tracer provider", "error", err)
 		}
 	}()
@@ -105,9 +105,9 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		metric.WithResource(res),
 	)
 	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
 		defer cancel()
-		if err := meterProvider.Shutdown(ctx); err != nil {
+		if err := meterProvider.Shutdown(shutdownCtx); err != nil {
 			logger.ErrorContext(ctx, "failed to shutdown meter provider", "error", err)
 		}
 	}()
@@ -163,16 +163,19 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	case <-ctx.Done():
 		logger.InfoContext(ctx, "Received shutdown signal")
 		shutdownStart := time.Now()
-		defer logger.InfoContext(ctx, "Shutdown complete", "took", time.Since(shutdownStart))
+		defer func() {
+			logger.InfoContext(ctx, "Shutdown complete", "took", time.Since(shutdownStart))
+		}()
 
 		ctx, cancel := context.WithTimeout(ctx, cfg.ShutdownTimeout)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
-			server.Close()
+			if closeErr := server.Close(); closeErr != nil {
+				logger.ErrorContext(ctx, "failed to force close server", "error", closeErr)
+			}
 			return fmt.Errorf("could not shutdown server: %w", err)
 		}
-		stop()
 	}
 
 	return nil
