@@ -5,6 +5,7 @@ go 1.22.0
 toolchain go1.24.2
 
 require (
+	github.com/caarlos0/env v3.5.0+incompatible
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.35.0

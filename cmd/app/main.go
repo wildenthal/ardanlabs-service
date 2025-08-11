@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/caarlos0/env"
 	"github.com/wildenthal/ardanlabs-service/internal/api"
-	"github.com/wildenthal/ardanlabs-service/internal/config"
 	"github.com/wildenthal/ardanlabs-service/internal/middleware"
 	"github.com/wildenthal/ardanlabs-service/pkg/debug"
 	"github.com/wildenthal/ardanlabs-service/pkg/logging"
@@ -46,11 +46,20 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	logger.InfoContext(ctx, "Starting up", "GOMAXPROCS", runtime.GOMAXPROCS(0), "build", build)
 
 	// Load configuration
-	cfg, err := config.LoadConfig(build)
+	type config struct {
+		APIHost         string        `env:"API_HOST"`
+		DebugHost       string        `env:"DEBUG_HOST"`
+		ReadTimeout     time.Duration `env:"READ_TIMEOUT"`
+		WriteTimeout    time.Duration `env:"WRITE_TIMEOUT"`
+		IdleTimeout     time.Duration `env:"IDLE_TIMEOUT"`
+		ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT"`
+	}
+	var cfg config
+	err := env.Parse(&cfg)
 	if err != nil {
 		return fmt.Errorf("could not load configuration: %w", err)
 	}
-	expvar.NewString("build").Set(cfg.Build)
+	expvar.NewString("build").Set(build)
 
 	// Start debug service
 	go func() {
